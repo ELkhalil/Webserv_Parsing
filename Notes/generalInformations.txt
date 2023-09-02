@@ -1,0 +1,98 @@
+we have blocks of code :
+    inside it we have a key_value pair
+the key represent the directive and the value is the name of it.
+{} -> the context and a key_value inside it is a directive for this specific context
+
+-------------------------------------------------------------
+serving static content:
+
+http {
+    type    {
+        text/css        css;
+        text/html       html;
+    }
+    server {
+        listen          8080;
+        root            /link/to/folder/contain/data/to/serve
+    
+        location ~* /count/[0-9]
+        {
+            root            /link/to/folder/contain/data/to/serve
+            try_files       /index.html  =404;
+        }
+        location /fruits {
+            root        /link/to/folder/contain/data/to/serve/.....
+        }
+        location /carbs {
+            alias       /link/to/folder/contain/data/to/serve/... //using alias will not append fruit at the end;
+        }
+        location /vegetables {
+            root        /link/to/folder/contain/data/to/serve/...
+            try_files   /vegetables/veggies.html    /index.html =404;
+        }
+    }
+}
+events {}
+
+/*
+nginx consists of modules which are controlled by directives specified in the 
+configuration file. Directives are divided into simple directives and block 
+directives. A simple directive consists of the name and parameters separated 
+by spaces and ends with a semicolon (;). A block directive has the same structure 
+as a simple directive, but instead of the semicolon it ends with a set of additional 
+instructions surrounded by braces ({ and }). If a block directive can have other 
+directives inside braces, it is called a context (examples: events, http, server, 
+and location).
+Directives placed in the configuration file outside of any contexts are considered 
+to be in the main context. The events and http directives reside in the main context, 
+server in http, and location in server.
+The rest of a line after the # sign is considered a comment.
+*/
+
+
+example :
+
+server
+{
+    listen 8080
+    host 127.0.0.1
+    server_name    localhost
+    client_max_body_size    4294967295
+    error_page 405 ./error/405.html
+    root /
+    location /web2
+}
+{
+    request_method [POST,GET,DELETE]
+    upload_enable on
+    root /nfs/homes/abihe/Downloads
+    upload_path /nfs/homes/abihe/Downloads/web3/download
+    upload_cgi on
+    return a.webp
+    auto_index on
+}
+location /
+{
+    request_method [POST,GET,DELETE]
+    upload_enable off
+    root /nfs/homes/abihe/Downloads
+    upload_path /nfs/homes/abihe/Downloads/web3/download
+    upload_cgi on
+    auto_index on
+    return index.ht
+}
+
+general syntax of nginix :
+
+<section>
+{
+    <directive> <parameters>;
+    <section>
+    {
+        <directive> <parameters>;
+    }
+}
+
+Nginx's configuration file parser follows a simple structure:
+
+-------------------------------------------------------------------------------------
