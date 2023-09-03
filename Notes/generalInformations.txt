@@ -6,12 +6,15 @@ the key represent the directive and the value is the name of it.
 -------------------------------------------------------------
 serving static content:
 
-http {
-    type    {
+http 
+{
+    type    
+    {
         text/css        css;
         text/html       html;
     }
-    server {
+    server
+    {
         listen          8080;
         root            /link/to/folder/contain/data/to/serve
     
@@ -53,35 +56,34 @@ The rest of a line after the # sign is considered a comment.
 example :
 
 server
-{
-    listen 8080
-    host 127.0.0.1
-    server_name    localhost
-    client_max_body_size    4294967295
-    error_page 405 ./error/405.html
-    root /
-    location /web2
-}
-{
-    request_method [POST,GET,DELETE]
-    upload_enable on
-    root /nfs/homes/abihe/Downloads
-    upload_path /nfs/homes/abihe/Downloads/web3/download
-    upload_cgi on
-    return a.webp
-    auto_index on
-}
-location /
-{
-    request_method [POST,GET,DELETE]
-    upload_enable off
-    root /nfs/homes/abihe/Downloads
-    upload_path /nfs/homes/abihe/Downloads/web3/download
-    upload_cgi on
-    auto_index on
-    return index.ht
-}
-
+    {
+        listen 8080
+        host 127.0.0.1
+        server_name    localhost
+        client_max_body_size    4294967295
+        error_page 405 ./error/405.html
+        root /
+        location /web2
+    }
+    {
+        request_method [POST,GET,DELETE]
+        upload_enable on
+        root /nfs/homes/abihe/Downloads
+        upload_path /nfs/homes/abihe/Downloads/web3/download
+        upload_cgi on
+        return a.webp
+        auto_index on
+    }
+    location /
+    {
+        request_method [POST,GET,DELETE]
+        upload_enable off
+        root /nfs/homes/abihe/Downloads
+        upload_path /nfs/homes/abihe/Downloads/web3/download
+        upload_cgi on
+        auto_index on
+        return index.ht
+    }
 general syntax of nginix :
 
 <section>
@@ -92,7 +94,5 @@ general syntax of nginix :
         <directive> <parameters>;
     }
 }
-
 Nginx's configuration file parser follows a simple structure:
-
 -------------------------------------------------------------------------------------
