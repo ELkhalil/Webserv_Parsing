@@ -6,7 +6,7 @@
 /*   By: aelkhali <aelkhali@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/09/01 18:13:37 by aelkhali          #+#    #+#             */
-/*   Updated: 2023/09/03 20:58:29 by aelkhali         ###   ########.fr       */
+/*   Updated: 2023/09/05 23:46:14 by aelkhali         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,93 +15,82 @@
 /*  ConfigFile Constructors  */
 ConfigFileParser::ConfigFileParser(const std::string &fileName) : _configFileName(fileName)
 {
+    std::string extensionToCheck = ".conf";
+    if (!(fileName.length() >= extensionToCheck.length() &&
+        fileName.compare(fileName.length() - extensionToCheck.length(), extensionToCheck.length(), extensionToCheck) == 0))
+        _errorAndExit("A Config File Must End With a .conf Extension");
+}
+
+ConfigFileParser::~ConfigFileParser(void)
+{
+    this->_configFile.close();
 }
 
 void ConfigFileParser::parseServersData()
 {
-    std::vector<LocationConfig> locations;
-    std::string line;
-    bool serverEnded = false;
-    ServerConfig currentConfig;
+    std::string                 line;
+    std::string                 trimmedLine;
+    std::vector<std::string>    tokens;
+    bool                        serverEnded = false;
 
+    /*  Opening The File    */
     std::ifstream _configFile(_configFileName.c_str());
-
-    if (!_configFile.is_open())
-        _errorAndExit("Error: Failed to open Config File");
-    bool is_empty = _configFile.peek() == std::ifstream::traits_type::eof();
-    if (is_empty)
-        _errorAndExit("Error: Empty Config File");
+    _isFileOpenedAndNotEmpty(_configFile);
 
     while (getline(_configFile, line))
     {
-        std::cout << line << std::endl;
-        if (_configFile.fail())
-            _errorAndExit("Error: While Reading Config File...");
-        if (line.empty() && _configFile.eof())
-        {
-            if (_servers.empty())
-                _errorAndExit("Error: A file Must have at least one server");
+        if (!_isFileGoodToGo(line))
             break;
-        }
-        std::string trimmedLine = _removeExtraSpaces(line);
+        trimmedLine = _removeExtraSpaces(line);
         if (_isLineEmptyOrComment(trimmedLine))
             continue;
+        /*  When a Line Contain a Server    */
         if (!trimmedLine.empty() && trimmedLine == "server")
         {
-            currentConfig = ServerConfig();
+            /*  Server object Init */
+            ServerConfig currentConfig;
+
+            serverEnded = false;
             getline(_configFile, line);
-            if (_configFile.fail() && !_configFile.eof())
-                _errorAndExit("Error: While Reading Config File...");
+            if (!_isFileGoodToGo(line))
+                break;
             if (_removeExtraSpaces(line) != "{")
-                 _errorAndExit("Error: A Server Block Must be followed by : { ");
+                _errorAndExit(SERVERSYNTAXERROR); 
             while (getline(_configFile, line))
             {
-                if (_configFile.fail() && !_configFile.eof())
-                    _errorAndExit("Error: While Reading Config File...");
-                std::string trimmedLine = _removeExtraSpaces(line);
-                if (_isLineEmptyOrComment(line))
+                /*  Starting To Read inside the server Here  */
+                if (!_isFileGoodToGo(line))
+                    _errorAndExit(READINSERVERGERROR);
+                trimmedLine = _removeExtraSpaces(line);
+                if (_isLineEmptyOrComment(trimmedLine))
                     continue;
-                
                 /*  PARSING DIRECTIVES */
-                std::istringstream iss(trimmedLine);
-                std::vector<std::string> tokens;
-                std::string token;
-
-                while (iss >> token)
-                    tokens.push_back(token);
-
-                if (tokens.empty())
-                    _errorAndExit("A Config File Must Contain Directives.");
-
+                tokens = _tokenizerOfDirectives(trimmedLine);
                 if (line.find("location") != std::string::npos)
                 {
-                    std::string path;
-
                     if (tokens[0] != "location")
-                        _errorAndExit("Error: 'location' directive keyword must start with 'location'.");
+                        _errorAndExit(LOCATIONNOTFOUNDERROR);
                     if (tokens.size() < 3)
-                        _errorAndExit("Error: 'location' directive must have at a single path as argument");
-                    if (tokens.back() != "{")
-                        _errorAndExit("Error: 'location' directive must end with '{'.");
-                    path = tokens[1];
-
-                    LocationConfig currentLocationConfig;
-
+                        _errorAndExit("Location Must Have At least One Argument");
+                    if (tokens.back() != "{")                                           
+                        _errorAndExit(LOCATIONSYNTAXERROR);
+                    /*  Init Location Object Here */
+                    LocationConfig currentLocationConfig(tokens[1]);
                     while (getline(_configFile, line))
                     {
-                        if (_configFile.fail() && !_configFile.eof())
-                            _errorAndExit("Error: While Reading Config File...");
-                        std::string trimmedLine = _removeExtraSpaces(line);
-                        if (_isLineEmptyOrComment(line))
+                        if (!_isFileGoodToGo(line))
+                            _errorAndExit(READINLOCATIONERROR);
+                        trimmedLine = _removeExtraSpaces(line);
+                        if (_isLineEmptyOrComment(trimmedLine))
                             continue;
                         if (trimmedLine == "}")
                         {
                             if (currentLocationConfig.isEmpty())
-                                _errorAndExit("Location Section Must not be empty !");
-                            currentConfig.setLocation(currentLocationConfig);
+                                _errorAndExit("Parsing the Location!");
+                            currentConfig.addLocation(currentLocationConfig);
                             break;
                         }
-                        _parseLocation(trimmedLine, currentLocationConfig);
+                        _parseLocationDirectives(trimmedLine, currentLocationConfig);
                     }
                     continue;
                 }
@@ -109,26 +98,12 @@ void ConfigFileParser::parseServersData()
                 {
                     if (tokens.size() != 2)
                         _errorAndExit("'listen' directive must have a single port to listen to.");
-                    if (!_isLineEndsWithSemicolone(trimmedLine))
-                        _errorAndExit("Missing semicolon at the end of the 'listen' directive.");
-                    std::vector<std::string> listenTokens = _splitBySemicolon(tokens.back());
-                    if (listenTokens.size() > 1)
-                        _errorAndExit("Duplicate semicolons in the 'listen' directive.");
-                    if (!tokens[tokens.size() - 1].empty())
-                        tokens[tokens.size() - 1].erase(tokens[tokens.size() - 1].size() - 1);
-                    currentConfig.setListenPort(_stringToInt(tokens[1]));
+                    currentConfig.setListenPort(_stringToIntPort(tokens[1]));
                 }
                 else if (tokens[0] == "server_name")
                 {
                     if (tokens.size() <= 1)
                         _errorAndExit("'server_name' directive must have a single argument.");
-                    if (!_isLineEndsWithSemicolone(trimmedLine))
-                        _errorAndExit("Missing semicolon at the end of the 'server_name' directive.");
-                    std::vector<std::string> servNamesTokens = _splitBySemicolon(tokens.back());
-                    if (servNamesTokens.size() > 1)
-                        _errorAndExit("Duplicate semicolons in the 'server_name' directive.");
-                    if (!tokens[tokens.size() - 1].empty())
-                        tokens[tokens.size() - 1].erase(tokens[tokens.size() - 1].size() - 1);
                     for (int i = 1; i < (int)tokens.size(); i++)
                         currentConfig.addServerName(tokens[i]);
                 }
@@ -136,13 +111,6 @@ void ConfigFileParser::parseServersData()
                 {
                     if (tokens.size() != 2)
                         _errorAndExit("'default_server' directive must have a single argument: on or off");
-                    if (!_isLineEndsWithSemicolone(trimmedLine))
-                        _errorAndExit("Missing semicolon at the end of the 'default_server' directive.");
-                    std::vector<std::string> listenTokens = _splitBySemicolon(tokens.back());
-                    if (listenTokens.size() > 1)
-                        _errorAndExit("Duplicate semicolons in the 'default_server' directive.");
-                    if (!tokens[tokens.size() - 1].empty())
-                        tokens[tokens.size() - 1].erase(tokens[tokens.size() - 1].size() - 1);
                     if (tokens[1] == "on")
                         currentConfig.setDefaultServer(true);
                     else if (tokens[1] == "off")
@@ -154,40 +122,42 @@ void ConfigFileParser::parseServersData()
                 {
                     if (tokens.size() != 3)
                         _errorAndExit("'error_page' directive must have two argument: error and errorPage");
-                    if (!_isLineEndsWithSemicolone(trimmedLine))
-                        _errorAndExit("Missing semicolon at the end of the 'error_page' directive.");
-                    std::vector<std::string> listenTokens = _splitBySemicolon(tokens.back());
-                    if (listenTokens.size() > 1)
-                        _errorAndExit("Duplicate semicolons in the 'error_page' directive.");
-                    if (!tokens[tokens.size() - 1].empty())
-                        tokens[tokens.size() - 1].erase(tokens[tokens.size() - 1].size() - 1);
                     currentConfig.addErrorPage(_stringToInt(tokens[1]), tokens[2]);
                 }
                 else if (tokens[0] == "root")
                 {
                     if (tokens.size() != 2)
                         _errorAndExit("'root' directive must have One argument: Path");
-                    if (!_isLineEndsWithSemicolone(trimmedLine))
-                        _errorAndExit("Missing semicolon at the end of the 'root' directive.");
-                    std::vector<std::string> listenTokens = _splitBySemicolon(tokens.back());
-                    if (!tokens[tokens.size() - 1].empty())
-                        tokens[tokens.size() - 1].erase(tokens[tokens.size() - 1].size() - 1);
-                    if (listenTokens.size() > 1)
-                        _errorAndExit("Duplicate semicolons in the 'root' directive.");
                 }
-                if (tokens[0] == "}")
+                else if (tokens[0] == "client_max_body_size")
+                {
+                    if (tokens.size() != 2)
+                        _errorAndExit("'client_max_body_size' directive must have One argument: Size");
+                    std::string sizeArgument = tokens[1];
+                    if (sizeArgument[sizeArgument.size() - 1] != 'M')
+                        _errorAndExit("Invalid format for 'client_max_body_size' directive. It should end with 'M'.");
+                    tokens[1].erase(tokens[1].size() - 1);
+                    int tmpSize = _stringToInt(tokens[1]);
+                    unsigned int maxSizeInBytes = tmpSize * 1024 * 1024;
+                    currentConfig.setMaxBodySize(maxSizeInBytes);
+                }
+                else if (tokens[0] == "}")
                 {
                     _servers.push_back(currentConfig);
                     serverEnded = true;
-                    continue;
+                    break;
                 }
+                else
+                    _errorAndExit(SECTIONSYNTAXERROR);
             }
             if (!serverEnded)
-                _errorAndExit("Unable to find the closing bracket for the server : }");
+                _errorAndExit(SERVERBRACEERROR);
         }
         else
-            _errorAndExit("Error: A config File Must start with : <server> without <>");
+            _errorAndExit(FILEWITHOUTSERVER);
     }
+    if (_servers.size() < 1)
+        _errorAndExit(SERVERNOTFOUNDERROR);
     _configFile.close();
 }
 
@@ -231,31 +201,43 @@ std::string ConfigFileParser::_removeExtraSpaces(const std::string &line)
 /*  Error printer and exit handler */
 void ConfigFileParser::_errorAndExit(std::string const &error)
 {
-    std::cerr << error << std::endl;
+    std::cerr << "Error: " << error << std::endl;
     _exit(1);
 }
 
-bool ConfigFileParser::_isLineEndsWithSemicolone(const std::string &str)
-{
-    if (!str.empty() && str[str.length() - 1] == ';')
-        return true;
-    return false;
-}
-
-std::vector<std::string> ConfigFileParser::_splitBySemicolon(const std::string &str)
-{
-    std::vector<std::string> tokens;
-    std::istringstream iss(str);
-    std::string token;
-    while (std::getline(iss, token, ';'))
-    {
-        if (!token.empty())
-            tokens.push_back(token);
-    }
-    return tokens;
-}
-
 int ConfigFileParser::_stringToInt(const std::string &input)
+{
+    std::istringstream iss(input);
+    long value;
+
+    iss >> value;
+
+    if (iss.fail() || !iss.eof())
+        _errorAndExit("Int: Invalid characters");
+    if (value > std::numeric_limits<int>::max() || value < std::numeric_limits<int>::min())
+        _errorAndExit("int: Overflow/Underflow during conversion of an Int");
+    int result = static_cast<int>(value);
+    return result;
+}
+
+/*  Check For Multiple Semicolone    */
+void    ConfigFileParser::_splitBySemicolon(const std::string &line)
+{
+    int semicoloneCount = 0;
+
+    if (!line.empty())
+    {
+        for (size_t i = 0; i < line.size(); i++)
+        {
+            if (line[i] == ';')
+                semicoloneCount++;
+        }
+    }
+    if (semicoloneCount > 1)
+        _errorAndExit("Duplicate Semicolons in a Directive Line.");
+}
+
+int ConfigFileParser::_stringToIntPort(const std::string &input)
 {
     std::istringstream iss(input);
     long value;
@@ -270,51 +252,29 @@ int ConfigFileParser::_stringToInt(const std::string &input)
     return result;
 }
 
-void ConfigFileParser::_parseLocation(std::string &trimmedLine, LocationConfig &currentLocationConfig)
+void ConfigFileParser::_parseLocationDirectives(std::string &trimmedLine, LocationConfig &currentLocationConfig)
 {
 
-    std::istringstream iss(trimmedLine);
-    std::vector<std::string> tokens;
-    std::string token;
-
-    while (iss >> token)
-        tokens.push_back(token);
+    std::vector<std::string> tokens = _tokenizerOfDirectives(trimmedLine);
 
     if (tokens.empty())
-        _errorAndExit("A Location Section Must Contain Directives.");
+        _errorAndExit("Cannote Parse Location Directives 'Empty Directive'");
     if (tokens[0] == "root")
     {
         if (tokens.size() != 2)
             _errorAndExit("'root' directive must have a single path.");
-        if (!_isLineEndsWithSemicolone(trimmedLine))
-            _errorAndExit("Missing semicolon at the end of the 'root' directive.");
-        std::vector<std::string> locationTokens = _splitBySemicolon(tokens.back());
-        if (locationTokens.size() > 1)
-            _errorAndExit("Duplicate semicolons in the 'root' directive inside location.");
         currentLocationConfig.setRoot(tokens[1]);
     }
     else if (tokens[0] == "alias")
     {
         if (tokens.size() != 2)
             _errorAndExit("'alias' directive must have a single argument.");
-        if (!_isLineEndsWithSemicolone(trimmedLine))
-            _errorAndExit("Missing semicolon at the end of the 'alias' directive.");
-        std::vector<std::string> locationTokens = _splitBySemicolon(tokens.back());
-        if (locationTokens.size() > 1)
-            _errorAndExit("Duplicate semicolons in the 'alias' directive inside location.");
         currentLocationConfig.setAlias(tokens[1]);
     }
     else if (tokens[0] == "autoindex")
     {
         if (tokens.size() != 2)
             _errorAndExit("'autoindex' directive must have a single argument: on or off");
-        if (!_isLineEndsWithSemicolone(trimmedLine))
-            _errorAndExit("Missing semicolon at the end of the 'autoindex' directive.");
-        std::vector<std::string> listenTokens = _splitBySemicolon(tokens.back());
-        if (listenTokens.size() > 1)
-            _errorAndExit("Duplicate semicolons in the 'autoindex' directive.");
-        if (!tokens[tokens.size() - 1].empty())
-            tokens[tokens.size() - 1].erase(tokens[tokens.size() - 1].size() - 1);
         if (tokens[1] == "on")
             currentLocationConfig.setAutoIndex(true);
         else if (tokens[1] == "off")
@@ -326,18 +286,64 @@ void ConfigFileParser::_parseLocation(std::string &trimmedLine, LocationConfig &
     {
         if (tokens.size() < 2)
             _errorAndExit("'index' directive must have arguments");
-        if (!_isLineEndsWithSemicolone(trimmedLine))
-            _errorAndExit("Missing semicolon at the end of the 'index' directive.");
-        std::vector<std::string> listenTokens = _splitBySemicolon(tokens.back());
-        if (listenTokens.size() > 1)
-            _errorAndExit("Duplicate semicolons in the 'index' directive.");
         for (int i = 1; i < (int)tokens.size(); i++)
             currentLocationConfig.setIndex(tokens[i]);
     }
+    else
+        _errorAndExit("cannot recognize Directive inside location");
+    // quick check for duplications
 }
 
-
-std::vector<ServerConfig>   ConfigFileParser::getServers( void ) const
+std::vector<ServerConfig> ConfigFileParser::getServers(void) const
 {
     return _servers;
+}
+
+void ConfigFileParser::_isFileOpenedAndNotEmpty(std::ifstream &configFile)
+{
+    if (!configFile.is_open())
+        _errorAndExit("Failed to open Config File");
+    bool is_empty = configFile.peek() == std::ifstream::traits_type::eof();
+    if (is_empty)
+        _errorAndExit("Empty Config File");
+}
+
+bool ConfigFileParser::_isFileGoodToGo(std::string const& line)
+{
+    if (_configFile.fail())
+        _errorAndExit(READINGERROR);
+    if (line.empty() && _configFile.eof())
+        return false;
+    return true;
+}
+
+std::vector<std::string> ConfigFileParser::_tokenizerOfDirectives( std::string const& line)
+{
+    std::istringstream          iss(line);
+    std::vector<std::string>    tokens;
+    std::string                 token;
+
+    /*  Check if Line have multiple semicolone */
+    _splitBySemicolon(line);
+
+    /*  {} Braces Line check if Stands Alone at a line */
+    if (!line.empty() && line.find("{") != std::string::npos && (line.find("{") + 1) < line.length())
+        _errorAndExit("A '{' Brace Must Not Be Followed By Anything !");
+    /*  Check if There is Something with }  in the same line */
+    if (!line.empty() && line.find("}") != std::string::npos && (line.find("}") + 1) < line.length())
+        _errorAndExit("A '}' Brace Must Not Be Followed By Anything !");
+
+    while (iss >> token)
+        tokens.push_back(token);
+    if (tokens.empty())
+        _errorAndExit(SECTIONSYNTAXERROR);
+
+    /*  Check If Directive Ends With a Semicolone */
+    if (!line.empty() && (tokens[0] != "location" && tokens[0] != "}" && tokens[0] != "{" && tokens[0] != "server") && line[line.length() - 1] != ';')
+        _errorAndExit("A Directive Must End with A semicolone");
+
+    /* Remove the Semicolone from the last Token To Make The Line ready*/
+    if (!tokens[tokens.size() - 1].empty() && line[line.length() - 1] == ';')
+        tokens[tokens.size() - 1].erase(tokens[tokens.size() - 1].size() - 1);
+    return tokens;
 }

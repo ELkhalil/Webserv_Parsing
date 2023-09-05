@@ -6,7 +6,7 @@
 /*   By: aelkhali <aelkhali@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/09/03 17:12:27 by aelkhali          #+#    #+#             */
-/*   Updated: 2023/09/03 19:34:24 by aelkhali         ###   ########.fr       */
+/*   Updated: 2023/09/05 22:44:18 by aelkhali         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,28 +16,33 @@
 #include <string>
 #include <vector>
 
-// Custom struct to represent redirection configuration
-class LocationConfig {
+class LocationConfig
+{
 public:
+
+    /*  Constructors */
     LocationConfig();
+    LocationConfig(const std::string& path);
 
-    void setAlias(const std::string& alias);
-    void setRoot(const std::string& root);
-    void setAutoIndex( bool autoIndex );
-    void setIndex (std::string const& index );
+    /*  Setters */
+    void    setAlias(const std::string& alias);
+    void    setRoot(const std::string& root);
+    void    setAutoIndex( bool autoIndex );
+    void    setIndex (std::string const& index );
 
+    /*  Other Helper Functions  */
     void clear();
 
-    const std::string& getAlias() const;
-    const std::string& getRoot() const;
-    bool isEmpty() const;
-
-    bool getAutoIndex() const;
+    /*  Getters */
     const std::vector<std::string>& getIndex() const;
-
-
+    const std::string&              getAlias() const;
+    const std::string&              getRoot() const;
+    const std::string&              getPath() const;
+    bool                            isEmpty() const;
+    bool                            getAutoIndex() const;
 
 private:
+    std::string                 path;
     std::string                 alias;
     std::string                 root;
     bool                        autoIndex;

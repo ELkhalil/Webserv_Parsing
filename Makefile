@@ -10,7 +10,7 @@ STOP = \033[0m
 
 # Commands And Flags :
 CPP = c++
-FLAGS =	-Wall -Wextra -Werror -std=c++98 -fsanitize=address -g
+FLAGS =	-Wall -Wextra -Werror -std=c++98
 RM = rm -rf
 
 # loading source files :
