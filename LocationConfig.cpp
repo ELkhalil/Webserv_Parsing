@@ -6,64 +6,83 @@
 /*   By: aelkhali <aelkhali@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/09/03 19:14:52 by aelkhali          #+#    #+#             */
-/*   Updated: 2023/09/05 19:25:23 by aelkhali         ###   ########.fr       */
+/*   Updated: 2023/09/07 20:32:46 by aelkhali         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "LocationConfig.hpp"
 
-// Constructor
-LocationConfig::LocationConfig() : autoIndex(false) {}
-LocationConfig::LocationConfig(const std::string& path) : path(path), autoIndex(false) {}
+// LocationConfig Constructor
+LocationConfig::LocationConfig() : _autoIndex(false) {}
+LocationConfig::LocationConfig(const std::string& path) : _path(path), _autoIndex(false), _autoUpload(false) {}
 
-// Setters
-void LocationConfig::setAlias(const std::string& alias) {
-    this->alias = alias;
+// LocationConfig Setters
+void LocationConfig::setRoot(const std::string& root)
+{
+    this->_root = root;
 }
-void LocationConfig::setRoot(const std::string& root) {
-    this->root = root;
+void LocationConfig::setUploadPath(const std::string& uploadPath)
+{
+    this->_uploadPath = uploadPath;
 }
-void LocationConfig::setAutoIndex(bool autoIndex) {
-    this->autoIndex = autoIndex;
+void LocationConfig::setCgiPath(const std::string& cgiPath)
+{
+    this->_cgiPath = cgiPath;
 }
+void LocationConfig::setAutoIndex(bool autoIndex)
+{
+    this->_autoIndex = autoIndex;
+}
+void LocationConfig::setAutoUpload(bool autoUpload)
+{
+    this->_autoUpload = autoUpload;
+}
+
 void LocationConfig::setIndex(const std::string& index)
 {
-    this->index.push_back(index);
+    this->_indexes.push_back(index);
 }
 
-// Clear the configuration
-void LocationConfig::clear()
+void LocationConfig::setAllowedMethod(const std::string& method)
 {
-    alias.clear();
-    root.clear();
-    autoIndex = false;
-    index.clear();
+    this->_allowedMethods.push_back(method);
 }
 
-// Getters
-const std::string&              LocationConfig::getAlias() const
+// LocationConfig Getters
+bool    LocationConfig::getAutoIndex() const
 {
-    return alias;
+    return _autoIndex;
 }
-bool                            LocationConfig::getAutoIndex() const
+
+bool    LocationConfig::getAutoUpload() const
 {
-    return autoIndex;
+    return _autoUpload;
 }
-const std::vector<std::string>& LocationConfig::getIndex() const
+std::vector<std::string> LocationConfig::getIndexes() const
 {
-    return index;
+    return _indexes;
 }
-bool                            LocationConfig::isEmpty() const
+std::vector<std::string> LocationConfig::getAllowedMethods() const
 {
-    if (alias.empty() || root.empty())
+    return _allowedMethods;
+}
+
+bool    LocationConfig::isEmpty() const
+{
+    if (_root.empty() || !_indexes.size())
         return false;
     return true;
 }
-const std::string&              LocationConfig::getRoot() const
+std::string LocationConfig::getRoot() const
 {
-    return root;
+    return _root;
 }
-const std::string&              LocationConfig::getPath() const
+std::string LocationConfig::getPath() const
 {
-    return path;
+    return _path;
+}
+
+std::string LocationConfig::getCgiPath() const
+{
+    return _cgiPath;
 }

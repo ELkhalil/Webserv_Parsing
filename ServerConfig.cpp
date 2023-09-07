@@ -6,7 +6,7 @@
 /*   By: aelkhali <aelkhali@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/09/03 19:18:06 by aelkhali          #+#    #+#             */
-/*   Updated: 2023/09/05 19:22:35 by aelkhali         ###   ########.fr       */
+/*   Updated: 2023/09/07 21:16:08 by aelkhali         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,12 +18,19 @@ ServerConfig::ServerConfig() : _maxBodySize(0), _isDefaultServer(false) {}
 // Setters
 void ServerConfig::setListenPort(int port)
 {
-    _listenPort.push_back(port);
+    this->_port = port;
 }
-void ServerConfig::addServerName(const std::string& serverName)
+
+void ServerConfig::setHost(std::string const& host)
 {
-    _serverNames.push_back(serverName);
+    this->_host = host;
 }
+
+void ServerConfig::setServerName(std::string const& serverName)
+{
+    _serverName = serverName;
+}
+
 void ServerConfig::addLocation(LocationConfig const& locationObj)
 {
     _locations.push_back(locationObj);
@@ -32,6 +39,7 @@ void ServerConfig::setDefaultServer(bool isDefault)
 {
     _isDefaultServer = isDefault;
 }
+
 void ServerConfig::addErrorPage(int errorCode, const std::string& errorPage) 
 {
     _errorPages[errorCode] = errorPage;
@@ -42,12 +50,13 @@ void ServerConfig::setMaxBodySize(int sizeInBytes)
 }
 
 // Getters
-const   std::vector<int>&             ServerConfig::getListenPorts() const
+int ServerConfig::getListenPort() const
 {
-    return _listenPort;
+    return _port;
 }
-const   std::vector<std::string>&     ServerConfig::getServerNames() const {
-    return _serverNames;
+std::string     ServerConfig::getServerName() const 
+{
+    return _serverName;
 }
 const   std::vector<LocationConfig>&  ServerConfig::getLocations() const {
     return _locations;
@@ -69,17 +78,13 @@ int     ServerConfig::getMaxBodySize() const
 void ServerConfig::printServerConfig() const
 {
     std::cout << "Listen Ports:";
-    for (size_t i = 0; i < _listenPort.size(); ++i)
-    {
-        std::cout << " " << _listenPort[i];
-    }
+    std::cout << " " << _port;
+    
     std::cout << std::endl;
 
     std::cout << "Server Names:";
-    for (size_t i = 0; i < _serverNames.size(); ++i)
-    {
-        std::cout << " " << _serverNames[i];
-    }
+    std::cout << " " << _serverName;
+    
     std::cout << std::endl;
 
     std::cout << "Default Server: " << (_isDefaultServer ? "true" : "false") << std::endl;
@@ -102,11 +107,10 @@ void ServerConfig::printServerConfig() const
     for (size_t i = 0; i < _locations.size(); ++i)
     {
         std::cout << "Location " << i + 1 << ":" << std::endl;
-        std::cout << "  Alias: " << _locations[i].getAlias() << std::endl;
         std::cout << "  Root: " << _locations[i].getRoot() << std::endl;
         std::cout << "  AutoIndex: " << (_locations[i].getAutoIndex() ? "true" : "false") << std::endl;
         std::cout << "  Index:";
-        const std::vector<std::string>& locationIndex = _locations[i].getIndex();
+        const std::vector<std::string>& locationIndex = _locations[i].getIndexes();
         for (size_t j = 0; j < locationIndex.size(); ++j)
         {
             std::cout << " " << locationIndex[j];

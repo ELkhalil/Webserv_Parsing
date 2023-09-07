@@ -6,7 +6,7 @@
 /*   By: aelkhali <aelkhali@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/09/03 17:12:27 by aelkhali          #+#    #+#             */
-/*   Updated: 2023/09/05 22:44:18 by aelkhali         ###   ########.fr       */
+/*   Updated: 2023/09/07 20:32:10 by aelkhali         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,28 +25,36 @@ public:
     LocationConfig(const std::string& path);
 
     /*  Setters */
-    void    setAlias(const std::string& alias);
-    void    setRoot(const std::string& root);
-    void    setAutoIndex( bool autoIndex );
-    void    setIndex (std::string const& index );
 
-    /*  Other Helper Functions  */
-    void clear();
+    void                        setRoot( std::string const& );
+    void                        setAutoIndex( bool );
+    void                        setAutoUpload( bool );
+    void                        setIndex ( std::string const& );
+    void                        setAllowedMethod ( std::string const& );
+    void                        setUploadPath ( std::string const& );
+    void                        setCgiPath ( std::string const& );
 
     /*  Getters */
-    const std::vector<std::string>& getIndex() const;
-    const std::string&              getAlias() const;
-    const std::string&              getRoot() const;
-    const std::string&              getPath() const;
-    bool                            isEmpty() const;
-    bool                            getAutoIndex() const;
+    std::vector<std::string>    getIndexes() const;
+    std::vector<std::string>    getAllowedMethods() const;
+    std::string                 getRoot() const;
+    std::string                 getPath() const;
+    std::string                 getCgiPath() const;
+    bool                        getAutoIndex() const;
+    bool                        getAutoUpload() const;
+
+    /*  Others  */
+    bool                        isEmpty() const;
 
 private:
-    std::string                 path;
-    std::string                 alias;
-    std::string                 root;
-    bool                        autoIndex;
-    std::vector<std::string>    index;
+    std::string                 _path;
+    std::string                 _root;
+    bool                        _autoIndex;
+    std::vector<std::string>    _indexes;
+    bool                        _autoUpload;
+    std::string                 _uploadPath;
+    std::string                 _cgiPath;
+    std::vector<std::string>    _allowedMethods;
 };
 
 #endif
