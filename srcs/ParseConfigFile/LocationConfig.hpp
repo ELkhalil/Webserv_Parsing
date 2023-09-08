@@ -6,7 +6,7 @@
 /*   By: aelkhali <aelkhali@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/09/03 17:12:27 by aelkhali          #+#    #+#             */
-/*   Updated: 2023/09/07 20:32:10 by aelkhali         ###   ########.fr       */
+/*   Updated: 2023/09/08 19:38:29 by aelkhali         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,12 +39,14 @@ public:
     std::vector<std::string>    getAllowedMethods() const;
     std::string                 getRoot() const;
     std::string                 getPath() const;
+    std::string                 getUploadPath() const;
     std::string                 getCgiPath() const;
     bool                        getAutoIndex() const;
     bool                        getAutoUpload() const;
 
     /*  Others  */
     bool                        isEmpty() const;
+    bool                        isLocationValidAndReady( void );
 
 private:
     std::string                 _path;

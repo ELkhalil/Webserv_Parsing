@@ -6,7 +6,7 @@
 /*   By: aelkhali <aelkhali@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/09/01 18:13:37 by aelkhali          #+#    #+#             */
-/*   Updated: 2023/09/07 21:15:35 by aelkhali         ###   ########.fr       */
+/*   Updated: 2023/09/08 20:18:48 by aelkhali         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,18 +21,16 @@ ConfigFileParser::ConfigFileParser(const std::string &fileName) : _configFileNam
         _errorAndExit("A Config File Must End With a .conf Extension");
 }
 
-ConfigFileParser::~ConfigFileParser(void)
-{
-    // this->_configFile.close();
-}
+ConfigFileParser::~ConfigFileParser(void) {}
 
 void ConfigFileParser::parseServersData()
 {
-    std::string line;
-    std::string trimmedLine;
-    std::vector<std::string> tokens;
-    bool serverEnded = false;
-    
+    std::string                 line;
+    std::string                 trimmedLine;
+    std::vector<std::string>    tokens;
+    bool                        serverEnded = false;
+    bool                        isDefaultParsedBefore = false;
+
     /*  Opening The File    */
     std::ifstream _configFile(_configFileName.c_str());
     _isFileOpenedAndNotEmpty(_configFile);
@@ -87,6 +85,8 @@ void ConfigFileParser::parseServersData()
                         {
                             if (currentLocationConfig.isEmpty())
                                 _errorAndExit("Parsing the Location!");
+                            if (!currentLocationConfig.isLocationValidAndReady())
+                                _errorAndExit("Location Inside A Server Must Contain At Least: DefaultPath, Root, index, and At least 1 AllowedMethod");
                             currentConfig.addLocation(currentLocationConfig);
                             break;
                         }
@@ -94,26 +94,27 @@ void ConfigFileParser::parseServersData()
                     }
                     continue;
                 }
-                else if (tokens[0] == "host")
+                else if (tokens[0] == "host" && currentConfig.getHost().empty())
                 {
                     if (tokens.size() != 2)
                         _errorAndExit("'Host' directive must have a single Argument.");
                     currentConfig.setHost(_parseHost(tokens[1]));
                 }
-                else if (tokens[0] == "port")
+                else if (tokens[0] == "port" && !currentConfig.getListenPort())
                 {
                     if (tokens.size() != 2)
                         _errorAndExit("'Port' directive must have a single Argument.");
                     currentConfig.setListenPort(_parsePort(tokens[1]));
                 }
-                else if (tokens[0] == "server_name")
+                else if (tokens[0] == "server_name" && currentConfig.getServerName().empty())
                 {
                     if (tokens.size() != 2)
                         _errorAndExit("'server_name' directive must have a single argument.");
                     currentConfig.setServerName(tokens[1]);
                 }
-                else if (tokens[0] == "default_server")
+                else if (tokens[0] == "default_server" && !isDefaultParsedBefore)
                 {
+                    // must have a booleen
                     if (tokens.size() != 2)
                         _errorAndExit("'default_server' directive must have a single argument: on or off");
                     if (tokens[1] == "on")
@@ -122,6 +123,7 @@ void ConfigFileParser::parseServersData()
                         currentConfig.setDefaultServer(false);
                     else
                         _errorAndExit("cannot recognize the 'default_server' directive Arguments try {on || off}.");
+                    isDefaultParsedBefore = true;
                 }
                 else if (tokens[0] == "error_page")
                 {
@@ -129,7 +131,7 @@ void ConfigFileParser::parseServersData()
                         _errorAndExit("'error_page' directive must have two argument: errorNumber and errorPage");
                     currentConfig.addErrorPage(_stringToInt(tokens[1]), tokens[2]);
                 }
-                else if (tokens[0] == "client_max_body_size")
+                else if (tokens[0] == "client_max_body_size" && !currentConfig.getMaxBodySize())
                 {
                     if (tokens.size() != 2)
                         _errorAndExit("'client_max_body_size' directive must have One argument: Size In Mb");
@@ -143,8 +145,11 @@ void ConfigFileParser::parseServersData()
                 }
                 else if (tokens[0] == "}")
                 {
+                    if (!currentConfig.isServerValidAndReady())
+                        _errorAndExit("Server Must Contain At Least: DefaultPath, Root, Index and At least 1 AllowedMethod");
                     _servers.push_back(currentConfig);
                     serverEnded = true;
+                    isDefaultParsedBefore = false;
                     break;
                 }
                 else
@@ -243,23 +248,23 @@ void ConfigFileParser::_parseLocationDirectives(std::string &trimmedLine, Locati
 
     if (tokens.empty())
         _errorAndExit("Cannote Parse Location Directives 'Empty Directive'");
-    if (tokens[0] == "root")
+    if (tokens[0] == "root" && currentLocationConfig.getRoot().empty())
     {
         if (tokens.size() != 2)
             _errorAndExit("'root' directive must have a single argument.");
         currentLocationConfig.setRoot(tokens[1]);
     }
-    else if (tokens[0] == "index")
+    else if (tokens[0] == "index" && !currentLocationConfig.getIndexes().size())
     {
         if (tokens.size() < 2)
             _errorAndExit("'index' directive must have arguments");
         for (size_t i = 1; i < tokens.size(); i++)
             currentLocationConfig.setIndex(tokens[i]);
     }
-    else if (tokens[0] == "autoindex")
+    else if (tokens[0] == "auto_index")
     {
         if (tokens.size() != 2)
-            _errorAndExit("'autoindex' directive must have a single argument: on or off");
+            _errorAndExit("'auto_index' directive must have a single argument: on or off");
         if (tokens[1] == "on")
             currentLocationConfig.setAutoIndex(true);
         else if (tokens[1] == "off")
@@ -278,21 +283,21 @@ void ConfigFileParser::_parseLocationDirectives(std::string &trimmedLine, Locati
         else
             _errorAndExit("cannot recognize the 'auto_upload' directive Arguments try {on || off}.");
     }
-    else if (tokens[0] == "upload_path")
+    else if (tokens[0] == "upload_path" && currentLocationConfig.getUploadPath().empty())
     {
         if (tokens.size() != 2)
             _errorAndExit("'upload_path' directive must have a single argument: path");
         currentLocationConfig.setUploadPath(tokens[1]);
     }
-    else if (tokens[0] == "cgi_path")
+    else if (tokens[0] == "cgi_path" && currentLocationConfig.getCgiPath().empty())
     {
         if (tokens.size() != 2)
             _errorAndExit("'cgi_path' directive must have a single argument: path");
         currentLocationConfig.setCgiPath(tokens[1]);
     }
-    else if (tokens[0] == "allowed_methods")
+    else if (tokens[0] == "allowed_methods" && !currentLocationConfig.getAllowedMethods().size())
     {
-        if (tokens.size() <= 4)
+        if (tokens.size() > 4)
             _errorAndExit("'allowed_methods' directive must have Three Methonds Only");
         else if (tokens.size() < 2)
             _errorAndExit("'allowed_methods' directive must have at least One Methond");
@@ -303,7 +308,7 @@ void ConfigFileParser::_parseLocationDirectives(std::string &trimmedLine, Locati
             currentLocationConfig.setAllowedMethod(tokens[i]);
     }
     else
-        _errorAndExit("cannot recognize Directive inside location");
+        _errorAndExit("Duplicate Or Unkown Type Of Directive inside Location");
 }
 
 std::vector<ServerConfig> ConfigFileParser::getServers(void) const

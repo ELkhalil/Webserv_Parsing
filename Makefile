@@ -14,7 +14,8 @@ FLAGS =	-Wall -Wextra -Werror -std=c++98
 RM = rm -rf
 
 # loading source files :
-SRCS = main.cpp ConfigFileParser.cpp ServerConfig.cpp LocationConfig.cpp
+CONFFILEPARSERS = ./srcs/ParseConfigFile/ConfigFileParser.cpp ./srcs/ParseConfigFile/ServerConfig.cpp ./srcs/ParseConfigFile/LocationConfig.cpp
+SRCS = main.cpp $(CONFFILEPARSERS)
 
 all : $(NAME)
 	@echo "You Can Use $(GREEN)*** $(NAME) ***$(STOP)"

@@ -6,7 +6,7 @@
 /*   By: aelkhali <aelkhali@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/09/03 14:28:35 by aelkhali          #+#    #+#             */
-/*   Updated: 2023/09/07 19:48:29 by aelkhali         ###   ########.fr       */
+/*   Updated: 2023/09/08 19:38:00 by aelkhali         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,13 +38,16 @@ public:
     void    setDefaultServer(bool isDefault);
     void    setMaxBodySize(int sizeInBytes);
 
+    /*  Helper Function */
+    bool    isServerValidAndReady( void );
+
     /*  Getters */
+    std::string                                 getHost() const;
     int                                         getListenPort() const;
     std::string                                 getServerName() const;
     const   std::vector<LocationConfig>&        getLocations() const;
     const   std::map<int, std::string>&         getErrorPages() const;
     int                                         getMaxBodySize() const;
-    // const std::map<std::string, std::string>&   getRoutes() const;
     bool                                        isDefaultServer() const;
 
     /*  Other Helper Functions  */
